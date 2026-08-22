@@ -1,6 +1,8 @@
 #include "led.h"
+#include "hw_def.h"
 
 #ifdef _USE_HW_LED
+#include "cli.h"
 
 typedef struct 
 {
@@ -9,6 +11,8 @@ typedef struct
   GPIO_PinState on_state;
   GPIO_PinState off_state;
 } led_tbl_t;
+
+static void ledCmd(cli_args_t *args);
 
 static led_tbl_t led_tbl[LED_MAX_CH] =
 {
@@ -26,7 +30,7 @@ bool ledInit(void)
   {
     ledOff(i);
   }
-
+  cliAdd("led", ledCmd);
   return true;
 }
 
@@ -49,5 +53,35 @@ void ledToggle(uint8_t ch)
   if (ch >= LED_MAX_CH) return;
 
   HAL_GPIO_TogglePin(led_tbl[ch].port, led_tbl[ch].pin);
+}
+
+void ledCmd(cli_args_t *args){
+  bool ret = false;
+  
+  //명령어 실행코드
+  if (args->argc == 1 && args->isStr(0, "test")) {
+    uint32_t pre_time;
+    uint32_t test_cnt = 0;
+
+    pre_time = millis();
+
+    while(cliKeepLoop()){
+      if (millis() - pre_time >= 500) {
+        ledToggle(_DEF_LED2);
+
+        test_cnt++;
+        cliPrintf("led test\n");
+        cliPrintf("cnt : %d\n", test_cnt);
+
+        cliMoveUp(2);   //2칸 올려줌
+      }
+      cliMoveDown(2);
+      ret = true;
+    }
+  }
+
+  if(!ret){
+  logPrintf("ledtest\n");
+  }
 }
 #endif

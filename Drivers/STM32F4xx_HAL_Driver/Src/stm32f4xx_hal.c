@@ -6,7 +6,7 @@
   *          This is the common part of the HAL initialization
   *
   ******************************************************************************
-  * @attention
+  * @attention  
   *
   * Copyright (c) 2017 STMicroelectronics.
   * All rights reserved.
