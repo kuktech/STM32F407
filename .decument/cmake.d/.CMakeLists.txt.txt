@@ -1,0 +1,48 @@
+소스파일들을 컴파일,링크하고 규착을 정하는 방법을 정의하는 파일이다.
+
+
+<5~9>
+매크로 정의
+컴파일러에게 #define USE_HAL_DRIVER
+            #define STM32F407xx 를 자동으로 넣어주는 것과같다
+
+<12~18>
+Include 경로 지정, 헤더파일 위치경로를 설정한다.
+#include시 컴파일러는 이곳을 참조해 헤더파일을 찾는다.
+
+<21~28>
+Application 소스
+main.c 
+stm32f4xx_it.c : 인터럽트 핸들러
+stm32f4xx_hal_msp.c : HAL초기화 지원 함수
+sysmem.c : malloc관련
+syscalls.c : printf관련
+
+<31~47>
+Driver 소스파일
+
+<64~66>
+소스코드가 저장된 라이브러리와는 다르게 설정만 전달하는 라이브러리이다. Include 경로, 매크로, 컴파일 옵션 등만 묶어놓는 용도로 사용된다.
+
+target_include_directories : stm32cubemx를 사용하는 프로젝트는 MX_Include_Dirs로 설정된(위에서) 경로에서 헤더파일을 찾도록 포함시킨다.
+
+target_compile_definitions : MX_Defines_Syms에는 USE_HAL_DRIVER , STM32F407xx , DEBUG가 있었고 컴파일 시 자동으로 Define 되도록 한다.
+위 두 함수에서도 INTERFACE가 등장하는데, stm32cubemx 자신은 사용하지 않고, stm32cubemx를 링크하는 다른 Target에게 전달하라는 의미이다.
+
+<69~71>
+stm32cubemx와는 다르게 실제 코드를 저장하는 라이브러리를 설정한다. OBJECT는 라이브러리 파일을 생성하지 않고,obj파일들만 생성시킨다. 빌드시 .c파일들을 라이브러리가 컴파일하여 .o파일을 생성한다.
+target_sources : STM32_Drivers 타겟에 소스 파일들을 추가. add로 라이브러리를 생성한 뒤, STM32_Drivers이 컴파일해야 할 소스들을 등록한다.
+target_link_libraries : stm32cubemx의 include경로를 STM32_Drivers가 자동으로 상속받아 사용한다.
+
+<81>
+위에서 생성한 라이브러리를 프로젝트에 연결.
+
++ 라이브러리는 여러 함수와 소수코드를 여러 파일에서 재사용하기 위해 모아놓고 라이브러리로 정의해놓은 것이다.
+
++ 하단의 CMakeLists.txt는 사용자 프로젝트 설정이고, 이 파일은 CubeMx 자동 생성 설정에 대한 파일이다. 
+
++ TOOLCHAIN : 컴파일 도구 모음
+  PREFIX : 앞에 붙는 문자열
+  gcc : c컴파일러
+  g++ : c++컴파일러
+  STM32는 arm-none-eabi-gcc라는 크로스 컴파일러 사용, 여기서 arm-none-eabi-를 변수로 놓은 것이 TOOLCHAIN_PREFIX이다.

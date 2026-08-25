@@ -1,0 +1,24 @@
+메인파일은 크게 6가지로 나뉜다
+1. 헤더파일 포함 <23~25>
+
+2. 전역 변수 선언 <42~44>
+huart1는 USART1 제어구조체
+baudrate
+stop bit
+parity
+상태정보
+등을 저장한다.
+hdma_usart1_rx USART1 RX용 DMA구조체, DMA2 Stream2설정을 저장.
+
+3. 함수 원형 선언 <50~54>
+선언된 함수들을 아래에 정의된다.
+
+4. main() <68~110>
+HAL_Init의 역할 : 
+HAL 라이브러리 초기화
+SysTick 설정
+NVIC 기본설정
+HAL 내부 상태 초기화
+(다른 호출함수들을 아래서 설명)
+5. CubeMX 생성 초기화 함수
+6. 에러 처리 함수

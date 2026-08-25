@@ -1,0 +1,117 @@
+STM32 시스템을 초기화하고 시스템 클럭 정보를 관리하는 파일.
+CPU초기 환경 구성을 담당한다.
+전원인가
+-> startup_stm32f407xx.s
+-> Reset_Handler
+-> SystemInit()   현재 파일에서 정의됨.
+-> main()
+
+핵심역할은
+1. SystemInit()
+2. SystemCoreClock 변수
+3. SystemCoreClockUpdata()
+
+<50~56>
+만약 ~~가 아직 정의되지 않았다면 정의하라는 의미이다. 
+STM32는 클럭 소스를 여려 개 가질 수 있다.
++ hsi(High Speed Internal)은 STM32 칩 내부에 들어있는 발진기로 16MHz이다. 별도 부품이 필요 없고 전원을 넣으면 바로 사용 가능하다. 그러나 정확도가 낮고 온도에 민감하다.
+hse(High Speed External)은 외부 크리스탈/클럭 발생기를 사용한다 보드에서 볼 수 있는 PH0 OSC_IN/PH1 OSC_OUT은 25MHz Crystal이며 ioc에서 설정을 찾을 수 있다.
+
+<76~111> (다른 부분에 비해 중요하지 않은 부분)
+<76~80>
+DATA_IN_ExtDRAM은 STM32가 외부메모리(SRAM,SDRAM)를 사용하는 경우 관련 초기화 코드를 활성화할 수 있도록 미리 준비해 둔 설정이다. define부분이 주석처리되어 있으므로 사용하지 않는 상태이다.
+
+<96~111>
+USER_VECT_TAB_ADDRESS은 Vector Table을 기본 위치가 아닌 다른 위치에 둘 것인지를 설정한다. 기본적으로 FLASH의 시작주소인 0x08000000에 Vector Table을 위치시키는데, 부트로더, 멀티펌웨어, 펌웨어 업데이트같은 특수한 경우에는 Vector Table을 다른 위치로 옮겨야 할 수도 있다. 따라서 define하여 사용자가 직접 위치를 지정할 수 있도록 한다.
+만약 define되었다면 VECT_TAB_SRAM은 Vector Table을 FLASH에 둘 것인가, SRAM에 둘 것인가를 결정한다. 현재는 주석처리 되었으므로 FALSH를 사용하는 것이다. 대부분의 프로젝트는 FALSH를 사용한다.
+VECT_TAB_OFFSET은 기준주소에서 Vector Table의 위치를 설정한다. 현재는 0이므로 시작주소 그대로 사용한다.
+
+<137~139>
+SystemCoreClock은 현재CPU 클럭 주파수 저장변수이다. 초기값이 16MHz인 이유는 STM32가 리셋 직후 HSI를 사용하기 때문이다. 
+AHBPrescTable은 AHB 버스 분주비 계산용 테이블이다. STM32클럭은 SYSCLK->AHB->APB1/2 순서로 분배된다. 예를 들어 SYSCLK가 96MHz이고 AHB Prescaler가 DIV4면 AHB = 24MHz가 된다. 그런데 RCC레지스터에는 DIV1~라는 값을 직접 저장하지 않고 특정 비트 패턴이 저장된다( 예)1000 = DIV1, 1001 = DIV2). 따라서 레지스터 값으로 실제 분주값을 계산하기 위한 테이블을 저장해둔 표이다.
+APBPrescTable도 위와 같은 원리이다.
+
++
+SYSCLK (시스템 클럭)
+    │
+    ▼
+AHB(Advanced High-performance Bus)
+    │
+    ├── CPU (Cortex-M4)
+    ├── SRAM
+    ├── DMA
+    └── 기타 고속 장치
+
+    ▼
+APB1
+    ├── USART2
+    ├── USART3
+    ├── TIM2
+    ├── TIM3
+    └── ...
+
+    ▼
+APB2
+    ├── USART1
+    ├── ADC
+    ├── TIM1
+    └── ...
+
+AHB는 STM32내부의 가장 중요한 고속버스이다. CPU가 연산을 수행할 때 AHB->SRAM접근한다. 따라서 CPU, DMA, 메모리같은 고속 장치들은 AHB에 연결되어 있다.
+APB(Advanced Peripheral Bus)는 주변장치용 버스다. UART, SPI, I2C, ADC같은 주변장치들은 APB를 통해 동작한다. 그중에 UART,I2C,ADC같은 장치는 큰 클록주파수가 필요없기에 고속과 저속 주변장치를 분리한다. APB1은 최대 42MHz,APB2는 최대 84MHz이다. USART1은 ABP2에, USART2는 ABP1에 있다.
+실제 분주비 설정은 main.c의 SystemClock_Config()에서 확인한다.
+주의해야 할 점은 AHB와 APB는 데이터/주소 버스란 점이다. AHB 버스의 동작클럭은 HCLK, APB1/2 버스의 동작 클럭은 PCLK1/2다.각 버스마다 고유의 클럭으로 동작하기에 함께 설명되기에 혼동하기 쉽다.
+
++ STM32의 클럭 구조
+HSI/HSE
+   ↓
+ PLL
+   ↓
+SYSCLK (system clock)
+   ↓
+AHB
+   ↓
+APB1 / APB2
+   ↓
+UART, GPIO, TIM 등
+
+RCC(Reset and clock control)은 리셋/클럭 제어를 담당하는 하드웨어 모듈이다. 예를 들어 UART를 사용한다고 하면 HAL_UART_Init()을 호출하기 이전에 __HAL_RCC_USART1_CLK_ENABLE()으로 USART1에 클럭을 공급해야 한다. 왜냐하면 STM32는 안 쓰는 장치를 클럭을 차단해 전력을 절약하기 때문이다. RCC는 클럭공급지 지정, 클럭의 종류 선정, 클럭주파수 설정을 관리한다.
+
+<<SystemInit>>
+Reset_Handler에서 가장 먼저 호출되는 함수이다. STM32가 본격적으로 프로그램을 실행하기 전 필요한 최소한의 하드웨어 환경을 준비하는 역할을 한다.
+<170~172>
+FPU(Floating Point Unit),실수 연산 전용 하드웨어를 활성화 한다. Cortex-M4는 FPU가 내장되어 있고 리셋직후에는 사용금지 상태이기 때문에 SCB->CPACR,레지스터를 수정하여 CP10,11 코프로세서 접근 권한을 열어준다.
+<174~176>
+외부 SRAM,SDRAM을 사용하는 보드라면 #define DATA_IN_ExtSRAM가 위에서 활성화되고 FMC,메모리 타이밍 설정같은 작업을 수행한다. 현재는 실행되지 않는다.
+<179~181>
+VectorTable의 위치를 설정한다. SCB->VTOR를 수정하여 인터럽트 벡터 시작 위치를 변경할 수 있다. 현재는 실행되지 않는다. 디폴트는 VTOR = 0x08000000
+
+<<SystemCoreClockUpdata>>
+현재 RCC 레지스터 설정을 읽어서 CPU의 동작주파수를 계산하여 SystemCoreClock에 저장하는 함수이다. SystemClock_Config()가 실행되면 클럭이 변경되기에 SystemCoreClock을 갱신해준다.
+<225>
+현재 SYSCLK 소스 확인 : RCC->CFGR은 Clock Configuration Register이고 그 안의 SWS(System Clock Switch Status)비트를 읽는데, 결과는 00(HSI),01(HSE),10(PLL)중에 하나이다. 그래서 switch(tmp)로 경우를 분리한다.
+
+<237~238>
+PLL공식이 적혀있다. 아래 구문에서 공식을 구현한다.
+
+<240>
+PLL입력원 확인 : pllsource = 0 -> HSI, pllsource = 1 -> HSE , 따라서 아래 if문을 통해 HSE 또는 HSI에 따라 PLL출력주파수를 계산한다.
+
+<241>
+PLLM읽기 
+RCC->PLLCFGR & RCC_PLLCFGR_PLLN >> 6 : PLLN읽기
+<254>
+PLLP읽기
+<255>
+최종 SYSCLK계산
+
+<263~265>
+여기서 AHB Prescaler를 읽는다. DIV설정을읽고 테이블에서 tmp값을 얻는다.
+SystemCoreClock >>= tmp; : 2의 tmp승으로 SystemCoreClock을 나눈다.
+
+<<SystemInit_ExtMemCtl>>
+외부 SRAM/SDRAM을 사용하는 보드에서만 필요한 함수이다. 외부 RAM을 CPU주소공간에 연결하여 일반 RAM처럼 사용할 수 있도록 초기화 한다.
+1. FMC/FSMC 클럭 활성화
+2. 관련 GPIO 핀 설정
+3. 메모리 타이밍 설정
+4. 외부 메모리 컨트롤러 활성화

@@ -1,0 +1,69 @@
+어떤 소스파일을 컴파일하고, 어떤 헤더를 찾고, 어떤 라이브러리 링크해서 최종 펌웨어를 만들 것인가를 정의하는 파일이다.
+
+<22,28>
+프로젝트 생성, 프로젝트이름 = cube_f407
+
+<35>
+실행파일 생성 -> cube_f407.elf생성준비
+
+<38>
+CubeMX 생성코드 추가
+Core/Src
+Core/Inc
+Drivers/
+startup_stm32f407zgtx.s
+STM32F407xx_FLASH.ld
+같은 CubeMX 생성코드를 전부 빌드에 포함시킨다.
+
+<41~43>
+다른 폴더의 파일을 실행하여 내부 빌드설정을 현재 프로젝트에 포함.
+
+<45~50>
+사용자 코드 수집
+지정한 폴더의 모든 c파일을 찾아 SRC_FILES에 저장/추가한다.
+
+<53~56>
+실제 컴파일 대상 등록
+SRC_FILES에 들어있는 모든 소스파일을 cube_f407프로젝트에 추가한다. 여기서 CubeMx 생성코드 + 사용자 코드 가 합쳐진다.
+
+<59~66>
+헤더 검색 경로
+
+<78~82>
+라이브러리 링크
+stm32cubemx 라이브러리와 연결한다
+stm32cubemx는 Cubemx생성 코드들을 묶어놓은 라이브러리다.
+HAL
+CMSIS
+startup
+system_stm32f4xx
+등이 포함된다.
++ add_subdirectory에서 지정된 경로로 파일이 실행되면 stm32cubemx라이브러리가 생성된다. 이후 이 함수를 통해 cube_f407에서 stm32cubemx 라이브러리를 사용한다고 선언한다.
+
+<84~87>
+최적화 옵션
+-Os는 속도보다 코드 크기를 최소화하는 옵션이다.
+STM32 Flash는 제한적이기에 자주 사용된다.
+
+<89~93>
+elf -> bin
+빌드 완료 후 cube_407.elf -> cube_f407.bin 생성.
+STM32CubeProgrammer에서 자주 사용하는 형식.
+
+<95~99>
+elf->hex
+빌드 완료 후 cube_407.elf -> cube_f407.hex 생성.
+
++ elf (Executable and Linkable Format)
+add_executable(${CMAEK_PROJECT_NAME})이 만드는 최종 결과물.
+이곳에는
+실제 기계어
+함수 주소
+변수 주소
+심볼 정보
+디버그 정보
+이 들어있다. STM32에 필요없는 데이터가 많기에 ${CMAEK_OBHCOPY}를 통해 elf를 bin으로 변환한다.
+
+bin은 91~92에서 생성된다. 단순히 순수 기계어로만 구성된다.
+
+hex는 사람이 읽을 수 있는 텍스트 파일이다.bin파일과 내용은 거의 같으나 주소정보와 체크섬이 함께 들어있다.
