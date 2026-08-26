@@ -1,0 +1,31 @@
+인터럽트 서비스 루틴들이 모여있는 파일이다.
+인터럽트를 사용하도록 CubeMX에서 활성화하지 않았기에 비어있다.
+Cubemx는 현재설정을 보고 필수 Cortex-M 예외 처리기만 생성한 상태이다.
+
+<<NMI_Handler>>
+Non Maskable Interrupt : 클럭 오류, 하드웨어 치명적 문제
+
+<<HardFault_Handler>>
+STM32 디버깅에서 자주 보는 함수이다. 잘못된 주소 접근, 스택오버플로우 등
+
+<<MemManage_Handler>>
+Memory Management Fault : 메모리 접근 오류, 허용되지 않은 영역에 접근하거나 MPU(Memory Protection Unit)을 사용할때 발생한다
+
+<<BusFault_Handler>>
+버스 접근 오류, 존재하지 않는 주소를 읽었을 때 발생, CPU와 메모리 사이 통신 문제 발생
+
+<<UsageFault_Handler>>
+명령어 사용 오류, 잘못된 명령 실행, 0으로 나누기
+
+<<SVC_Handler>>
+Supervisor Call : 운영체제에서 많이 사용한다. FreeRTOS같은 RTOS에서도 중요하다
+
+<<DebugMon_Handler>>
+디버그 이벤트 처리, JTAG/SWD 디버깅 관련
+
+<<PendSV_Handler>>
+Context Switching
+
+<<SysTick_Handler>>
+SysTick : ARM Cortec-M 내부 타이머이다. 보통 1ms마다 발생하도록 설정한다
+이 파일에서 유일하게 동작하는 함수이다.

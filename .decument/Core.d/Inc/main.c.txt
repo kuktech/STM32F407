@@ -20,5 +20,58 @@ SysTick 설정
 NVIC 기본설정
 HAL 내부 상태 초기화
 (다른 호출함수들을 아래서 설명)
+
 5. CubeMX 생성 초기화 함수
+<<SystemClock_Config>>
+SystemInit은 최소한의 기본 클럭 초기화를, 이함수는 프로젝트 맞춤 클럭 설정을 담당한다.
+<118~119>
+구조체 생성, RCC_OscInitStruct는 HSI/HSE/PLL 발진기 설정용이고,RCC_ClkInitStruct는 SYSCLK/AHB/APB1/APB2 버스 클럭 설정용.
+CubeMX는 구조체 채우기->HAL함수 호출->레지스터 설정 패턴을 사용.
+<123>
+__HAL_RCC_PWR_CLK_ENABLE은 PWR(전원관리) 모듈 클럭 공급. STM32도 하나의 주변장치이기 때문에 전원관리를 사용하려면 RCC통해 클럭을 공급해야 한다. 이것은 RCC->APB1ENR의 특정비트를 켜는 HAL매크로이다.
+<124>
+CPU속도에 따라 필요한 전압이 다르기에 내부 전압 레귤레이터를 설정한다. SCALE1은 F407에서 일반적으로 사용한다.
+<129~132>
+클럭 소스는 HSI사용, HSI on, 공장 출하 보정값 사용, PLL사용 안함.
+<133~136>
+HAL_RCC_OscConfig(&RCC_OscInitStruct) : 구조체로 설정한 내용들을 실제 RCC레지스터에 적용
+<140~145>
+4가지 클럭을 설정하기로 지정, CPU클럭을 HSI사용, AHB,APB1/2 분할
+if문의 조건문에 있으나 함수가 실행된다.
+<147~150>
+HAL_RCC_ClockConfig(&RCC_ClkInitStruct,FLASH_LATENCY_0) : 위 설정을 실제 레지스터에 적용
+FLASH_LATENCY_0 : CPU의 속도에 따른 FALSH의 읽기속도를 조절 16MHz의 경우 0으로 설정, 96MHz인 경우 FLASH_LATENCY_3
+
+<<MX_USART1_UART_Init>>
+USART1을 115200bps 시리얼 통신이 가능하도록 설정
+<168~179>
+USART1을 사용설정
+통신속도(Baud Rate)설정
+데이터길이 설정(1글자 = 8비트)
+stop비트를 1비트 설정
+패리티 비트 설정(사용안함)
+모드설정(TX,RX가능)
+하드웨어 흐름제어 설정(사용안함)
+한비트를 여러번 샘플링하여 비트를 정확히 확인(16번 측정)
+HAL_UART_Init(&huart1) : 구조체 저장값을 USART1레지스터에 적용, 이과정에서 HAL_UART_MspInit을 호출한다.
+
+<<MX_DMA_Init>>
+DMA2에 클럭을 공급하는 함수, USART1 RX -> DMA2 Stream2 -> RAM
+__HAL_RCC_DMA2_CLK_ENABLE = RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN
+DMA2 클럭 공급만 수행하고, 다른 설정은 HAL_UART_MspInit에서 실행
+
+<<MX_GPIO_Init>>
+MX_DMA_Init과 비슷하게 기본설정이전 준비작업에 가깝다.
+GPIOA/C/H에 클럭을 공급하도록 설정한다. PA에 USART1, PH에 HSE OSC_IN/OUT, PC에 LSE OSC32_IN/OUT을 사용하도록 설정했기에 생성된 함수들이다. 
+레지스터 접근 코드로는 RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN
+
 6. 에러 처리 함수
+<<Error_Handler>>
+초기화 함수 실행중 실패시 이 함수가 실행된다.
+__disable_irq : 모든 마스크 가능한 인터럽트 비활성화, 내부적으로는 CPSID라는 ARM명령어가 실행된다.
+while(1)으로 계속 정지된다. 초기화가 실패되면 계속 실행에 위험이 있기 떄문이다.
+
+<<assert_failed>>
+assert는 개발 중 절대 발생하면 안 되는 상황을 검사하는 기능이다.
+file와 line은 오류가 발생한 위치를 의미해 개발자가 오류위치를 파악할 수 있다.
+

@@ -1,0 +1,101 @@
+이곳엔 실제 애플리케이션 로직은 없다. C표쥰 라이브러리(printf,scanf 등)와 STM32하드웨어를 연결해주는 중간 다리 역할을 한다.
+PC에서 printf문을 쓴다면 운영체제가 콘솔 창에 출력해준다.그러나 STM32는 운영체제,모니터,키보드가 없다. STM32는 printf를 어디에 출력하는지, scanf를 어디서 입력받는지 모른다. 따라서 printf는 UART로 전송하도록, scanf는 UART로 입력받도록 알려주는 역할을 본 파일이 한다. 
+운영체제가 없는 환경에서 필요한 시스템 호출들을 최소한으로 구현한 파일이다.
+
+<38>
+main.c파일의 구조체를 가져온다.
+
+<<_write>>
+printf가 실행되면 호출된다.
+
+printf("ABC")
+↓
+_write()
+↓
+HAL_UART_Transmit()
+↓
+USART1 전송
+↓
+PC 시리얼 모니터 출력
+
++ STM32가 특별한 게 아니라 C라이브러리 구조에 따라 prinf를 실행하면 실제로는
+printf()
+ ↓
+vprintf()
+ ↓
+write()
+ ↓
+_write() 과정을 거친다.
+pc에서는
+printf()
+ ↓
+운영체제의 write()
+ ↓
+콘솔 출력
+그런데 STM32에서는 운영체제가 없기에 라이브러리가 _write함수를 사용자에게 요구하는 것이다. 결국
+printf()
+ ↓
+라이브러리 내부
+ ↓
+_write()
+ ↓
+UART
+어디에 출력할지는 _write의 코드가 결정한다.
+
+<<_read>>
+scanf가 실행되면 호출된다.
+
+scanf()
+↓
+_read()
+↓
+__io_getchar()
+↓
+UART 수신
+
+아래 함수들은 STM32에서는 지원하지 않는 기능들이다.
+_open : 파일 시스템 없기에 fopen()은 지원하지 않는다.
+_close : 파일 닫기 불가
+_fork : 리눅스의 프로세스 복제기능
+_execve : 프로그램 실행
+_wait : 프로세스 대기
+_kill : 프로세스 종료
+_getpid : 프로세스ID
+
+<175~>
+현재 사용하는 C라이브러리가 Picolibc인 경우에만 사용한다. 목적은
+printf
+scanf
+stdin
+stdout
+stderr를 STM32 UART와 연결한다.
+
++ 1.컴파일 : printf를 호출하는 코드를 생성, 아직 _write()는 찾지 않는다.
+2. 링크 : 모든 목적 파일(.o)를 모아두고 printf가 필요함을 발견 후 라이브러리를 확인, 라이브러리의 printf구현을 가져온다.
+3. printf 내부에서 _write가 필요하다는 또 다른 심볼을 발견한다. 따라서 링커는 프로젝트 전체를 확인하여 _write는 찾는다.
+최종적으로 printf->_write 연결관계를 ELF에 기록한다.
+MCU가 실행중일 때는 더이상 파일을 확인할 필요 없이 이미 주소가 결정되어 있다. 
+그래서 ELF파일을 모든 함수와 변수의 주소가 정리된 최종 실행 파일이라고 부른다.
+
+main.c
+ap.c
+hw.c
+...
+ ↓
+컴파일
+ ↓
+main.o
+ap.o
+hw.o
+...
+ ↓
+링크
+ ↓
+project.elf
+ ↓
+objcopy
+ ↓
+project.hex
+project.bin
+
+

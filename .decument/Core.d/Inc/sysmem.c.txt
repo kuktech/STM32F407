@@ -1,0 +1,20 @@
+동적 메모리 (malloc, calloc, realloc)을 지원하기 위한 파일이다.
+PC에서는 동적할당 시 운영체제가 메모리할당을 처리해준다. 그러나 STM32는 운영체제가 없으므로 C라이브러리(newlib)가 동적할당을 실행하며 메모리를 가져오기 위해 사용자가 제공한 _sbrk를 호출한다.
+
+<<_sbrk>>
+malloc()
+ ↓
+_sbrk()
+ ↓
+RAM 할당
+
+<56~60>
+_end : data,bss가 끝난위치,Heap의 시작위치, 링커스크립트에서 정의된다.
+_estack : RAM끝 주소
+_Min_Stack_Size : Stack최소 용량, stack_limit계산에 사용되어 Heap의 사용범위를 설정한다.
+<70~74>
+Heap이 Stack영역을 침범하려 하면 할당실패 -> ENOMEM
+서로 덮어써서 프로그램이 폭주하는 것을 방지한다.44
+
+_sbrk_heap_end : Heap끝 주소를 저장한다. 동적할당 시 그만큼 증가한다.
+

@@ -1,0 +1,44 @@
+main.c가 무엇을 초기화 할 지 결정하는 파일이라면, 이파일은 실제 하드웨어를 어떻게 연결할지 설정한다. 특히 HAL_UART_MspInit안에서
+PA9  → USART1_TX
+PA10 → USART1_RX
+DMA2_Stream2 연결
+NVIC 인터럽트 설정
+설정 코드가 있다. HAL_UART_Init이 내부에서 호출한다.
+
+main()
+↓
+MX_USART1_UART_Init()
+↓
+HAL_UART_Init(&huart1)
+↓
+HAL_UART_MspInit()
+↓
+GPIO 설정
+DMA 설정
+USART 클럭 설정
+
+<<HAL_MspInit>>
+STM32 전체 HAL이 사용하는 공통 자원 초기화
+__HAL_RCC_SYSCFG_CLK_ENABLE : SYSCFG(System Configuration Controller)의 사용목적은 인터럽트 라인 매핑, 메모리 리맵, 시스템 설정이다.
+__HAL_RCC_PWR_CLK_ENABLE : 전원 관리 블록 활성화, 예로 저전력모드, 전압 스케일링등에 사용한다.
+요약하면 STM32 공통 시스템 기능을 활성화하는 함수이다.
+
+<<HAL_UART_MspInit>>
+<95~97>
+USART1에 클럭 공급, GPIOA 활성화
+<102~107>
+PA9,PA10선택
+AF(Alternate Function) : STM32핀은 다양한 기능들 가지는데,현재는 GPIO가 아닌 USART기능을 사용하도록 설정한 것이다.
+AF7 = USART1
+<111~124>
+DMA인스턴스 선택(Stream2)
+채널선택, USART1_RX -> DMA2_Stream2 -> Channel14
+전송방향,USART -> RAM,  UART 수신 전용 DMA를 설정한다
+주변장치 주소 고정, UART 데이터 레지스터는 USART -> DR 하나뿐이므로 계속 같은 주소를 읽어야 한다.
+메모리주소 설정(RAM주소 증가)
+데이터 크기(1바이트 단위 전송)
+Circular모드, 일반 DMA는 버퍼 끝 -> 정지, Circular는 버퍼 끝 -> 처음으로 복귀 -> 계속 수신, 즉 UART데이터를 계속 수신하도록 설정.
+__HAL_LINKDMA : UART와 DMA연결, 이전에는 서로 독립된 장치이다. 연결 이후에는 HAL__UART_Receive_DMA같은 함수를 사용할 수 있다.
+
+<<HAL_UART_MspDeInit>>
+UART초기화 함수의 반대동작을 수행한다. USART1 클럭 종료, PA9/10제거, DMA해제, 임베디드 프로그램은 부팅 후 계속 동작하기에 거의 호출되지 않는다.
