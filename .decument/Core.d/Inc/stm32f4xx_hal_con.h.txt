@@ -1,0 +1,45 @@
+수백개의 define이 나열되어 있다
+
+<38~90>
+HAL 모듈 활성화 
+프로젝트에서 어떤 HAL 드라이버를 사용할 것인지 define한다.
+예를 들어 #define HAL_UART_MODULE_ENABLED가 되어있다면 stm32f4xx_hal_uart.c, stm32f4xx_hal_uart.h가 컴파일에 포함된다.만약 define이 활성화 되지 않으면 HAL_UART_Init같은 함수를 사용할 수 없다.
+
+<98~141>
+Oscillator(클록) 설정
+HSE/LSE_STARTUP_TIMEOUT : 클록이 안정화될 때까지 기다리는 최대시간
+
+<150~152>
+System 설정, 시스템 전역 동작 방식
+VDD_VALUE : 전원전압 3.3V
+USE_RTOS : RTOS 사용 여부
+
+<153~155>
+Cache / Prefetch관련
+F4에서 자주 보인다. Flash 접근 성능 향상 옵션
+
+<157~195>
+HAL callback 등록 기능을 사용할지 말지 설정하는 영역.
+0U는 비활성 상태.
+Register Callback 기능을 활성화하면 실행 중에 함수 포인터를 등록할 수 있다. 인터럽트 발생 시 실행할 함수를 실행 중에 바꿀 수 있는 기능이다.
+
+<209~258>
+이더넷 드라이버 설정 영역
+STM32F407은 이더넷 MAC하드웨어를 내장하고 있어 HAL설정 파일에 관련 define들이 있다.
+1. MAC_ADDR : MAC Addresss, 이것은 네트워크 장비마다 갖는 고유주소이다.
+2. ETH : 이더넷 송/수신 버퍼 설정
+3. PHY : Physical Layer, 이더넷 통신은 두 개의 칩이 필요하다.
+STM32
+  ↓
+MAC
+  ↓
+PHY
+  ↓
+RJ45 커넥터
+  ↓
+LAN 케이블
+STM32F407에는 MAC있고 PHY는 없다. 따라서 별도의 PHY칩을 붙여야 한다.
+
+<274~472>
+HAL포함 영역
+HAL 모듈 활성화 영역에서 활성화된 모듈의 헤더를 자동으로 포함
